@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System Monitor</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="header-left">
+        <span class="logo">SysMon</span>
+        <span id="connection-badge" class="badge badge-connecting">Connecting…</span>
+      </div>
+      <div class="header-right">
+        <label for="server-select">Server:</label>
+        <select id="server-select">
+          {% for server in servers %}
+          <option value="{{ server.id }}">{{ server.hostname }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stat cards -->
+    <section class="stat-cards">
+      <div class="card stat-card" id="card-cpu">
+        <div class="stat-label">CPU Usage</div>
+        <div class="stat-value" id="stat-cpu">—</div>
+        <div class="stat-sub" id="stat-cpu-cores">— cores</div>
+      </div>
+      <div class="card stat-card" id="card-mem">
+        <div class="stat-label">Memory</div>
+        <div class="stat-value" id="stat-mem">—</div>
+        <div class="stat-sub" id="stat-mem-used">— / — GB</div>
+      </div>
+      <div class="card stat-card" id="card-disk">
+        <div class="stat-label">Disk</div>
+        <div class="stat-value" id="stat-disk">—</div>
+        <div class="stat-sub" id="stat-disk-used">— / — GB</div>
+      </div>
+      <div class="card stat-card" id="card-net">
+        <div class="stat-label">Network (↑↓)</div>
+        <div class="stat-value" id="stat-net">—</div>
+        <div class="stat-sub" id="stat-net-detail">sent / recv</div>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="charts-grid">
+      <div class="card chart-card">
+        <h3>CPU Usage <span class="chart-window">last 5 min</span></h3>
+        <canvas id="chart-cpu"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h3>Memory Usage <span class="chart-window">last 5 min</span></h3>
+        <canvas id="chart-mem"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h3>Disk Usage</h3>
+        <div class="doughnut-wrap">
+          <canvas id="chart-disk"></canvas>
+          <div class="doughnut-label" id="doughnut-label">—</div>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <h3>Network I/O <span class="chart-window">last 5 min</span></h3>
+        <canvas id="chart-net"></canvas>
+      </div>
+    </section>
+
+    <!-- Alert Feed -->
+    <section class="card alerts-section">
+      <div class="alerts-header">
+        <h3>Recent Alerts</h3>
+        <span id="alert-count" class="badge badge-neutral">0</span>
+      </div>
+      <ul id="alert-list" class="alert-list">
+        <li class="alert-empty">No alerts fired yet.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

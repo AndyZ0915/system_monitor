@@ -1,0 +1,9 @@
+Flask==3.0.0
+Flask-SocketIO==5.3.6
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.9
+psutil==5.9.7
+APScheduler==3.10.4
+eventlet==0.35.1
+python-dotenv==1.0.0
+SQLAlchemy==2.0.23
