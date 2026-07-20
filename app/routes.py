@@ -53,8 +53,13 @@ def get_metrics(server_id):
     from_str = request.args.get("from")
     to_str = request.args.get("to")
 
-    from_dt = datetime.fromisoformat(from_str) if from_str else datetime.utcnow() - timedelta(hours=1)
-    to_dt = datetime.fromisoformat(to_str) if to_str else datetime.utcnow()
+    # CHANGE: wrapped in try/except — fromisoformat() raised an unhandled
+    # ValueError (500) on a malformed ?from=/?to=, now returns a clean 400
+    try:
+        from_dt = datetime.fromisoformat(from_str) if from_str else datetime.utcnow() - timedelta(hours=1)
+        to_dt = datetime.fromisoformat(to_str) if to_str else datetime.utcnow()
+    except ValueError:
+        return jsonify({"error": "from/to must be valid ISO timestamps"}), 400
 
     metrics = (
         Metric.query.filter(
@@ -93,9 +98,20 @@ def list_alert_rules():
     return jsonify([r.to_dict() for r in rules])
 
 
+# CHANGE: shared severity whitelist — the frontend only styles 'critical'
+# specially, so a typo'd severity here would silently break that
+VALID_SEVERITIES = ["info", "warning", "critical"]
+
+
 @bp.route("/api/alert-rules", methods=["POST"])
 def create_alert_rule():
     data = request.json
+    # CHANGE: request.json is None for a JSON 'null' body and a list for a
+    # JSON array body — either used to blow up on data["metric_name"] etc.
+    # with an unhandled TypeError (500) instead of a clean 400
+    if not isinstance(data, dict):
+        return jsonify({"error": "request body must be a JSON object"}), 400
+
     required = ["server_id", "metric_name", "threshold", "comparison"]
     for field in required:
         if field not in data:
@@ -108,14 +124,26 @@ def create_alert_rule():
     if data["comparison"] not in ("gt", "lt"):
         return jsonify({"error": "comparison must be 'gt' or 'lt'"}), 400
 
+    # CHANGE: validate severity so bad values don't silently fall through
+    severity = data.get("severity", "warning")
+    if severity not in VALID_SEVERITIES:
+        return jsonify({"error": f"severity must be one of {VALID_SEVERITIES}"}), 400
+
+    # CHANGE: threshold was passed straight to float() below — a
+    # non-numeric value raised an unhandled ValueError (500)
+    try:
+        threshold = float(data["threshold"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "threshold must be a number"}), 400
+
     Server.query.get_or_404(data["server_id"])
 
     rule = AlertRule(
         server_id=data["server_id"],
         metric_name=data["metric_name"],
-        threshold=float(data["threshold"]),
+        threshold=threshold,
         comparison=data["comparison"],
-        severity=data.get("severity", "warning"),
+        severity=severity,
         email_to=data.get("email_to"),
         enabled=data.get("enabled", True),
     )
@@ -128,6 +156,25 @@ def create_alert_rule():
 def update_alert_rule(rule_id):
     rule = AlertRule.query.get_or_404(rule_id)
     data = request.json
+    # CHANGE: data was used directly in `for field in [...]: if field in data`
+    # with no None/type check — a JSON 'null' or array body raised an
+    # unhandled TypeError (500) instead of a clean 400
+    if not isinstance(data, dict):
+        return jsonify({"error": "request body must be a JSON object"}), 400
+
+    # CHANGE: PUT accepted any value for comparison/severity/threshold with
+    # no validation, unlike POST — added the same checks here for consistency
+    if "comparison" in data and data["comparison"] not in ("gt", "lt"):
+        return jsonify({"error": "comparison must be 'gt' or 'lt'"}), 400
+
+    if "severity" in data and data["severity"] not in VALID_SEVERITIES:
+        return jsonify({"error": f"severity must be one of {VALID_SEVERITIES}"}), 400
+
+    if "threshold" in data:
+        try:
+            data["threshold"] = float(data["threshold"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "threshold must be a number"}), 400
 
     for field in ["threshold", "comparison", "severity", "email_to", "enabled"]:
         if field in data:
