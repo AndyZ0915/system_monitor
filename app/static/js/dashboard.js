@@ -257,11 +257,21 @@ function addAlert(data) {
   const li = document.createElement("li");
   li.className = `alert-item ${data.severity || "warning"}`;
   const time = new Date().toLocaleTimeString();
-  li.innerHTML = `
-    <div>
-      <div class="alert-msg">${data.message}</div>
-      <div class="alert-time">${time}</div>
-    </div>`;
+
+  // CHANGE: previously built this with li.innerHTML = `...${data.message}...`
+  // — that's an XSS hole if message ever carries unescaped user input, so
+  // building nodes and using textContent instead
+  const wrap = document.createElement("div");
+  const msg = document.createElement("div");
+  msg.className = "alert-msg";
+  msg.textContent = data.message;
+  const ts = document.createElement("div");
+  ts.className = "alert-time";
+  ts.textContent = time;
+
+  wrap.appendChild(msg);
+  wrap.appendChild(ts);
+  li.appendChild(wrap);
   list.prepend(li);
 
   // Keep list from growing forever in the UI
