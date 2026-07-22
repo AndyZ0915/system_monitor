@@ -25,13 +25,3 @@ psql -U postgres -d sysmonitor -f migrations/init.sql
 python run.py
 ```
 
-The app starts on `http://localhost:5000`.
-
-## Security note
-
-⚠️ This project currently ships with a `.env` file containing real-looking
-credentials (DB password, SMTP placeholders). If this repo has ever been
-pushed anywhere, **rotate the database password immediately** and remove
-`.env` from git history (e.g. with `git filter-repo` or BFG). `.gitignore`
-now excludes `.env` going forward, but that only prevents *future* commits —
-it does not retroactively scrub history.
